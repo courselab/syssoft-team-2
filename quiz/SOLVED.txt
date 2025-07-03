@@ -85,3 +85,95 @@ ou algo que garanta que %eax contenha um valor coerente com 1 byte retornado.
 O compilador precisa saber a assinatura das funções ao compilar main e foo.
 Se bar for declarado depois sem protótipo anterior, o compilador assume um tipo int por padrão (em C antigo), 
 o que pode causar comportamento indefinido se o tipo real for char.
+
+
+p4 - a) Resultado da execução dos programas
+p4-v1:
+A execução foi bem-sucedida e a saída apresentada foi Foo, indicando que a função foi corretamente incorporada e chamada no binário.
+
+p4-v2:
+Assim como o anterior, o programa rodou normalmente e exibiu Foo, demonstrando que o link com a biblioteca estática ocorreu sem problemas.
+
+p4-v3:
+Inicialmente, houve uma falha de execução devido à ausência da biblioteca dinâmica no caminho padrão do sistema. 
+A mensagem de erro indicava que o libp4.so não pôde ser localizado. Após configurar a variável de ambiente LD_LIBRARY_PATH com o diretório da 
+biblioteca, o programa foi executado corretamente e também imprimiu Foo.
+
+Resumo:
+Os três executáveis produzem a mesma saída, mas no caso do uso de biblioteca dinâmica (p4-v3), é necessário garantir que o sistema saiba 
+onde encontrar a .so, o que pode exigir configuração adicional.
+
+b) Tamanhos dos binários
+Analisando o tamanho final de cada executável:
+
+p4-v1: 15.020 bytes
+Mais volumoso, pois incorpora diretamente todos os objetos (.o) necessários na construção do binário.
+
+p4-v2: 14.980 bytes
+Ligeiramente menor, pois inclui somente o conteúdo da biblioteca estática que está em uso. Ainda assim, o código da lib é incluído no executável.
+
+p4-v3: 14.924 bytes
+É o mais compacto dos três, já que apenas faz referência à biblioteca dinâmica, sem incorporar o código dela no próprio binário.
+
+c) Análise com nm
+p4-v1:
+Os símbolos foo e bar aparecem como definidos no binário, com marcação T, indicando que suas implementações estão presentes 
+diretamente no executável.
+
+p4-v2:
+O símbolo foo é identificado da mesma forma (T), mas bar não aparece listado, pois permanece encapsulado dentro da biblioteca estática e 
+não foi necessário para o funcionamento do programa.
+
+p4-v3:
+O símbolo foo ainda é listado como T (presente na tabela de símbolos dinâmicos), mas bar não é exposto no binário — 
+sua resolução ocorre apenas durante o carregamento da biblioteca compartilhada em tempo de execução.
+
+Conclusão:
+p4-v2 e p4-v3 não listam o símbolo bar porque ele não é utilizado diretamente no programa principal. A forma como o símbolo é omitido, 
+no entanto, varia conforme o tipo de biblioteca.
+
+d) Resultado com readelf -d
+p4-v1 e p4-v2:
+Ambas as versões possuem dependência apenas da biblioteca padrão do sistema (libc.so.6). Não há menção a bibliotecas adicionais.
+
+p4-v3:
+Contém uma entrada explícita para a biblioteca dinâmica libp4.so, além da dependência da libc. Isso confirma que a ligação com a 
+biblioteca personalizada ocorrerá em tempo de execução.
+
+Conclusão:
+Somente p4-v3 mantém uma dependência dinâmica da libp4.so, enquanto as outras versões são completamente autossuficientes após a compilação.
+
+e) Considerações sobre bibliotecas estáticas vs. dinâmicas
+Distribuição para outros sistemas (a):
+Executáveis com bibliotecas estáticas são mais fáceis de transportar, já que não dependem de arquivos externos. No caso das dinâmicas, 
+é necessário garantir que a .so esteja presente no destino.
+
+Atualização de bibliotecas (b):
+Ao usar bibliotecas dinâmicas, atualizações podem beneficiar todos os programas automaticamente. Já com bibliotecas estáticas, 
+cada programa precisa ser recompilado para incorporar as mudanças.
+
+Uso compartilhado em um único sistema (c):
+As bibliotecas dinâmicas oferecem melhor aproveitamento de memória, pois podem ser carregadas uma única vez e 
+reutilizadas por diversos processos. Bibliotecas estáticas, por outro lado, resultam em duplicação de código em cada programa.
+
+dyn - a) Static Library
+O que é: Biblioteca (.a) cujas funções são copiadas para o executável no momento da compilação.
+
+Vantagens: Binário independente, fácil de distribuir, não depende de arquivos externos.
+
+Desvantagens: Aumenta o tamanho do executável, não aproveita atualizações da biblioteca, ocupa mais memória se usada por vários programas.
+
+dyn - b) Dynamic Library com código relocável
+O que é: Biblioteca (.so) criada sem -fPIC, requerendo relocação de código em tempo de execução.
+
+Vantagens: Código externo reaproveitado sem recompilar o binário.
+
+Desvantagens: Não pode ser compartilhado eficientemente entre processos; carregamento mais lento; 
+não compatível com práticas modernas de segurança (como ASLR).
+
+dyn - c) Dynamic Library com Position-Independent Code (PIC)
+O que é: Biblioteca (.so) criada com -fPIC, permitindo que o código seja carregado em qualquer posição de memória.
+
+Vantagens: Compartilhável entre processos, eficiente, compatível com ASLR, padrão moderno.
+
+Desvantagens: Leve impacto no desempenho (mínimo), necessário usar -fPIC ao compilar.
