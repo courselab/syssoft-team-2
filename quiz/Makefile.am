@@ -28,4 +28,7 @@ BUNDLE_TOOLS  = bintools.mk
 
 include $(TOOL_DIR)/example.mk
 
+# p2fix.c
+p2fix: p2fix.c
+	gcc -o p2fix p2fix.c
 
