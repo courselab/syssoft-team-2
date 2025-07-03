@@ -1,0 +1,87 @@
+Respostas às questões presentes no README.md do quiz.
+
+p1) 
+A variação nos endereços de memória ocorre por causa do ASLR (Randomização do Espaço de Endereçamento), 
+uma técnica de segurança que carrega o programa em locais aleatórios da memória a cada execução. 
+Isso dificulta ataques como buffer overflow, tornando o sistema mais seguro. 
+Desabilitar o ASLR temporariamente pode ser útil para testes, mas é essencial reativá-lo para garantir a proteção do sistema.
+
+
+p2) 
+Ao executar o programa original p2, descobrimos que inserir uma string maior que o buffer, como "youshallnotpass", faz com que o acesso 
+seja indevidamente concedido. Isso ocorre por um buffer overflow: a função scanf("%s", ...) não limita o tamanho da entrada e 
+permite sobrescrever a variável verified, comprometendo a lógica de verificação.
+O erro de design está na ausência de validação do tamanho da entrada e no uso inseguro de buffers próximos a variáveis sensíveis. 
+Como o compilador não oferece proteção automática, corrigimos o problema em p2fix.c substituindo scanf por fgets, que 
+limita a leitura ao tamanho do buffer. 
+Após a correção, entradas excessivas não afetam a variável de controle, tornando o programa mais seguro mesmo sem suporte a proteção de pilha.
+
+p3 - a)
+No assembly da função foo, temos:
+
+80491ae:    50              push %eax
+80491af:    e8 eb ff ff ff  call 804919f <bar>
+
+Aqui, o valor que será passado como argumento para bar está em %eax e é empilhado com push %eax antes da chamada (call) de bar.
+A calling convention define regras sobre como funções são chamadas e como os parâmetros são passados entre elas. 
+A ABI (Application Binary Interface) padroniza essas regras para permitir interoperabilidade entre código compilado por diferentes 
+compiladores e linguagens.
+
+p3 - b)
+Ao final de bar, temos:
+
+80491ce:    8b 45 fc    mov -0x4(%ebp),%eax
+
+Ou seja, o valor calculado é carregado em %eax, e isso segue a convenção cdecl: o valor de retorno de uma função é armazenado em %eax.
+
+Esse método de retorno não é exclusivo do Linux, mas sim da convenção cdecl usada em sistemas x86 de 32 bits (sejam Windows ou Linux). 
+Pode variar se outra convenção for usada (como stdcall ou fastcall).
+
+p3 - c)
+O trecho:
+
+804919f: 55           push %ebp
+80491a0: 89 e5        mov %esp,%ebp
+...
+80491bd: c9           leave
+
+Essas instruções fazem parte do prólogo e epílogo da função:
+
+- push %ebp: salva o antigo base pointer (para restaurar depois).
+
+- mov %esp, %ebp: define um novo frame base para a função atual.
+
+- leave: é equivalente a mov %ebp, %esp seguido de pop %ebp, restaurando o stack frame anterior.
+
+Se essas instruções forem omitidas:
+O controle do stack frame seria perdido, dificultando o acesso a variáveis locais e parâmetros.
+Só podem ser omitidas se a função não usar variáveis locais nem parâmetros acessados via frame pointer — o que não é o caso aqui.
+
+p3 - d)
+Isso aloca espaço na pilha para variáveis locais.
+
+- sub $0x18, %esp: reserva 24 bytes no stack.
+
+- sub $0x10, %esp: reserva 16 bytes.
+
+Segundo a ABI x86:
+A pilha deve ser alinhada a 16 bytes antes de chamadas de funções (em algumas convenções modernas).
+Isso também garante que as variáveis locais tenham espaço reservado.
+
+Em main, a terceira instrução é:
+8049190: 83 e4 f0    and $0xfffffff0, %esp
+
+Ela alinha o ponteiro da pilha a 16 bytes, conforme o padrão da ABI, para garantir desempenho e compatibilidade com instruções SSE, por exemplo.
+
+p3 - e)
+Após mudar o retorno de bar de int para char, ao recompilar e examinar foo, vemos que:
+- A instrução que move o valor de retorno para %eax pode ter mudado para manipular apenas 1 byte, como:
+movzbl %al, %eax
+
+ou algo que garanta que %eax contenha um valor coerente com 1 byte retornado.
+
+* Por que a declaração antecipada de foo e bar é útil?
+
+O compilador precisa saber a assinatura das funções ao compilar main e foo.
+Se bar for declarado depois sem protótipo anterior, o compilador assume um tipo int por padrão (em C antigo), 
+o que pode causar comportamento indefinido se o tipo real for char.
