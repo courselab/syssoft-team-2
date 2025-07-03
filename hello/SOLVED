@@ -1,9 +1,9 @@
-Para esta tarefa, adicionei uma nova função em Assembly (libc.S) chamada get_memory_size, que chama a interrupção BIOS INT 0x12. Esta interrupção retorna o tamanho da memória convencional (em KB) no registrador %ax.
+Para esta tarefa, adicionamos uma nova função em Assembly (libc.S) chamada get_memory_size, que utiliza a interrupção BIOS INT 0x12. Essa interrupção retorna o tamanho da memória convencional (em KB) no registrador %ax.
 
-A função foi marcada como global e simplesmente retorna esse valor.
+A função foi marcada como global e simplesmente retorna esse valor para ser usado no programa principal.
 
-No arquivo main.c, declarei a função extern unsigned short get_memory_size(void), chamei ela dentro de main() e imprimi o valor retornado em uma string usando printf.
+No arquivo main.c, declaramos a função extern unsigned short get_memory_size(void), chamamos essa função dentro da função main() e imprimimos o valor retornado utilizando printf.
 
-No Makefile, adicionei regras para compilar libc.S com GCC usando as opções -m32 -ffreestanding, garantindo que o código Assembly e C sejam compatíveis. Usei ld para gerar o executável e objcopy para gerar o arquivo binário final.
+No Makefile, incluímos regras para compilar o arquivo libc.S com o GCC, utilizando as opções -m32 e -ffreestanding, garantindo a compatibilidade entre o código Assembly e o código C. Também usamos o ld para gerar o executável e o objcopy para produzir o binário final.
 
-Com isso, o programa imprime a mensagem "Hello World" e o tamanho da memória convencional detectado via BIOS.
+Com isso, o programa imprime a mensagem “Hello World” e o tamanho da memória convencional detectado por meio da BIOS.
